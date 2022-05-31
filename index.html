@@ -5,68 +5,118 @@
   <meta charset="UTF-8">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Подкаст из аудиокниги</title>
+  <title>Audiobook to podcast</title>
   <style>
-    iframe {
+    #resultFrame {
       display: none;
     }
-    td, th {
-  border: 1px solid;
-}
-    table{
+
+    input[type=url], input[type=text], input[type=submit] {
+      display: block;
+    }
+
+    input{
+      margin-bottom: 1em;
+      padding: 0.5em;
+    }
+
+    td {
+      border: 1px solid;
+      padding-left: 0.5em;
+      padding-right: 0.5em;
+    }
+
+    th {
+      border: 1px solid;
+      padding: 0.7em;
+    }
+
+    #feed {
+      display: inline-block;
+      background-color: coral;
+      color: white;
+      margin-top: 1em;
+      margin-bottom: 1em;
+      padding: 0.5em;
+      border-radius: 0.3em;
+      text-decoration: none;
+      font-weight: bold;
+    }
+
+    #feed:hover {
+      background-color: chocolate;
+      box-shadow: inset 0 -3em 3em rgb(0 0 0 / 10%), 0 0 0 2px rgb(255 255 255), 0.3em 0.3em 1em rgb(0 0 0 / 30%);
+      position: relative;
+      top: -0.1em;
+      left: -0.1em;
+    }
+
+    h1 {
+      margin-top: 0;
+    }
+
+    table {
       width: 100%;
       border-collapse: collapse;
       display: block;
-    overflow-x: auto;
-    white-space: nowrap;
+      overflow-x: auto;
+      white-space: nowrap;
     }
-
   </style>
 </head>
 
 <body>
+  <iframe id="resultFrame" src="" name="resultFrame"></iframe>
 
-  <form action="/feed" method="GET" target="result">
-    <input name="page" type="url" required value="">
-    <input name="pattern" type="text" value=".mp3">
-    <input name="update" type="checkbox" value="{{.}}" checked>
+  <form action="/feed" method="GET" target="resultFrame">
+    <label for="page_id">URL:</label>
+    <input id="page_id" name="page" type="url" required value="">
+
+    <label for="pattern_id">File name pattern:</label>
+    <input id="pattern_id" name="pattern" type="text" value="*.mp3">
+
+    <input id="update_id" name="update" type="checkbox" value="{{.}}" checked>
+    <label for="update_id">Do not update feed</label>
+
     <input type="submit">
   </form>
 
-  <iframe id="result" src="" name="result">
-  </iframe>
+  <div id="result" hidden>
+    <a id="feed" href=""  target="_blank">
+      RSS Feed
+    </a>
 
-  <a id="feed" href=""></a>
+    <h1 id='header'></h1>
 
-<table>
-  <thead>
-    <th>MIME</th>
-    <th>TITLE</th>
-    <th>URL</th>
-  </thead>
-  <tbody id="links">
-  </tbody>
-</table>
-
-  </ul>
-
+    <table>
+      <thead>
+        <th>MIME</th>
+        <th>TITLE</th>
+        <th>URL</th>
+      </thead>
+      <tbody id="links">
+      </tbody>
+    </table>
+  </div>
 
   <script>
-    function updateFrame() {
+    function parseResultFrame() {
       var links = document.getElementById('links');
       links.innerHTML = "";
 
-      var iframe = document.getElementById('result');
+      var iframe = document.getElementById('resultFrame');
       var feed = document.getElementById('feed');
       var url = iframe.contentDocument.URL;
       feed.href = url;
-      feed.innerText = url;
 
       var iframeDocument = iframe.contentDocument || iframe.contentWindow.document;
 
-      var highlightedItems = iframeDocument.documentElement.querySelectorAll("channel > item");
+      var header = iframeDocument.documentElement.querySelector("channel > title");
+      document.getElementById('header').innerText = header.textContent;
 
-      highlightedItems.forEach(function (item) {
+      var items = iframeDocument.documentElement.querySelectorAll("channel > item");
+
+      items.forEach(function (item) {
         var title = item.querySelector('title').textContent;
         var enclosure = item.querySelector('enclosure');
         var url = enclosure.getAttribute('url');
@@ -88,9 +138,11 @@
 
         links.appendChild(tr);
       });
+
+      document.getElementById('result').hidden = false;
     }
 
-    document.getElementById('result').onload = updateFrame;
+    document.getElementById('resultFrame').onload = parseResultFrame;
   </script>
 </body>
 
