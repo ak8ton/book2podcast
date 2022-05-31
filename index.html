@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Подкаст из аудиокниги</title>
+  <style>
+    iframe {
+      display: none;
+    }
+    td, th {
+  border: 1px solid;
+}
+    table{
+      width: 100%;
+      border-collapse: collapse;
+      display: block;
+    overflow-x: auto;
+    white-space: nowrap;
+    }
+
+  </style>
+</head>
+
+<body>
+
+  <form action="/feed" method="GET" target="result">
+    <input name="page" type="url" required value="">
+    <input name="pattern" type="text" value=".mp3">
+    <input name="update" type="checkbox" value="{{.}}" checked>
+    <input type="submit">
+  </form>
+
+  <iframe id="result" src="" name="result">
+  </iframe>
+
+  <a id="feed" href=""></a>
+
+<table>
+  <thead>
+    <th>MIME</th>
+    <th>TITLE</th>
+    <th>URL</th>
+  </thead>
+  <tbody id="links">
+  </tbody>
+</table>
+
+  </ul>
+
+
+  <script>
+    function updateFrame() {
+      var links = document.getElementById('links');
+      links.innerHTML = "";
+
+      var iframe = document.getElementById('result');
+      var feed = document.getElementById('feed');
+      var url = iframe.contentDocument.URL;
+      feed.href = url;
+      feed.innerText = url;
+
+      var iframeDocument = iframe.contentDocument || iframe.contentWindow.document;
+
+      var highlightedItems = iframeDocument.documentElement.querySelectorAll("channel > item");
+
+      highlightedItems.forEach(function (item) {
+        var title = item.querySelector('title').textContent;
+        var enclosure = item.querySelector('enclosure');
+        var url = enclosure.getAttribute('url');
+        var type = enclosure.getAttribute('type');
+
+        var tr = document.createElement("tr");
+
+        var td1 = document.createElement("td");
+        var td2 = document.createElement("td");
+        var td3 = document.createElement("td");
+
+        td1.innerText = type;
+        td2.innerText = title;
+        td3.innerText = decodeURI(url);
+
+        tr.appendChild(td1);
+        tr.appendChild(td2);
+        tr.appendChild(td3);
+
+        links.appendChild(tr);
+      });
+    }
+
+    document.getElementById('result').onload = updateFrame;
+  </script>
+</body>
+
+</html>
