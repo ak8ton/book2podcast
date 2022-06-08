@@ -2,6 +2,7 @@ package main
 
 import (
 	_ "embed"
+	"flag"
 	"fmt"
 	"html/template"
 	"log"
@@ -9,17 +10,13 @@ import (
 	"mime"
 	"net/http"
 	"net/url"
+	"os"
 	"path/filepath"
 	"strings"
 	"time"
 
 	"golang.org/x/net/html"
 )
-
-//go:embed index.html
-var htmlTemplate string
-
-var pageTemplate *template.Template
 
 const timeFormat = "20060102150405"
 
@@ -88,23 +85,32 @@ func getFileName(urlPath string, linkText string) (fileName string, mimeType str
 	return fileName, mimeType
 }
 
+func getAbsUrl(baseUrl *url.URL, url string) *url.URL {
+	if url == "" {
+		return nil
+	}
+
+	absUrl, err := baseUrl.Parse(url)
+	if err != nil {
+		return nil
+	}
+
+	return absUrl
+}
+
 func writeAllLinks(w http.ResponseWriter, pattern string, doc *html.Node, baseUrl *url.URL) {
 	if doc == nil {
 		return
 	}
 
 	var searchLinks func(*html.Node)
+
 	searchLinks = func(node *html.Node) {
 		if node.Type == html.ElementNode && node.Data == "a" {
 			for _, a := range node.Attr {
 				if a.Key == "href" {
 					url := a.Val
-
-					if url == "" {
-						continue
-					}
-
-					absUrl, _ := baseUrl.Parse(url)
+					absUrl := getAbsUrl(baseUrl, url)
 					if absUrl == nil {
 						continue
 					}
@@ -192,20 +198,28 @@ func rssHandler(w http.ResponseWriter, r *http.Request) {
 	writeRss(doc, w, pattern, baseUrl)
 }
 
-func indexHandler(w http.ResponseWriter, r *http.Request) {
-	if r.URL.Path != "/" {
-		http.Error(w, "",
-			http.StatusNotFound)
-		return
-	}
-	err := pageTemplate.Execute(w, time.Now().Format(timeFormat))
-	logError("Template.Execute", err)
-}
+//go:embed index.html
+var htmlTemplate string
 
-func logError(trace string, err error) {
+func getIndexHandler() func(http.ResponseWriter, *http.Request) {
+	pageTemplate, err := template.New("indexPage").Parse(htmlTemplate)
 	if err != nil {
-		log.Println(trace+": %s", err)
+		log.Fatal(err)
 	}
+
+	indexHandler := func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/" {
+			http.Error(w, "",
+				http.StatusNotFound)
+			return
+		}
+		err := pageTemplate.Execute(w, time.Now().Format(timeFormat))
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
+
+	return indexHandler
 }
 
 func addExtensionType(extension, mimeType string) {
@@ -215,21 +229,42 @@ func addExtensionType(extension, mimeType string) {
 	}
 }
 
-func main() {
+func addMimeTypes() {
 	addExtensionType(".mp3", "audio/mpeg")
 	addExtensionType(".m4a", "audio/x-m4a")
 	addExtensionType(".mp4", "video/mp4")
 	addExtensionType(".mov", "video/quicktime")
+}
 
-	var err error = nil
-	pageTemplate, err = template.New("indexPage").Parse(htmlTemplate)
-	if err != nil {
-		log.Fatal(err)
+func parseFlags() string {
+	flag.Usage = func() {
+		fmt.Fprintf(flag.CommandLine.Output(), "Usage of %s [OPTION] [ADDR]:\n", os.Args[0])
+		fmt.Fprint(flag.CommandLine.Output(), "\n")
+		flag.PrintDefaults()
 	}
 
-	http.HandleFunc("/", indexHandler)
+	ipHost := flag.String("host", "", "IP address host name")
+	ipPort := flag.String("port", "8080", "IP address port number")
+	flag.Parse()
+
+	addr := fmt.Sprintf("%s:%s", *ipHost, *ipPort)
+
+	if flag.NArg() == 1 {
+		addr = flag.Arg(0)
+	}
+
+	return addr
+}
+
+func main() {
+	addr := parseFlags()
+	log.Println("IP address:", addr)
+
+	addMimeTypes()
+
+	http.HandleFunc("/", getIndexHandler())
 	http.HandleFunc("/feed", rssHandler)
 
-	err = http.ListenAndServe(":8080", nil)
+	err := http.ListenAndServe(addr, nil)
 	log.Fatal(err)
 }
