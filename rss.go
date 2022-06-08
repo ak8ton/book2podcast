@@ -124,8 +124,8 @@ func writeAllLinks(w http.ResponseWriter, pattern string, doc *html.Node, baseUr
 	searchLinks(doc)
 }
 
-func writeRss(_doc *html.Node, w http.ResponseWriter, pattern string, baseUrl *url.URL) {
-	htmlNode := getChild(_doc, "html")
+func writeRss(doc *html.Node, w http.ResponseWriter, pattern string, baseUrl *url.URL) {
+	htmlNode := getChild(doc, "html")
 
 	fmt.Fprintf(w, "<?xml version='1.0' encoding='UTF-8' ?>")
 	fmt.Fprintf(w, "<rss version='2.0'>")
