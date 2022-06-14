@@ -1,4 +1,4 @@
-module rss
+module book2podcast
 
 go 1.18
 
